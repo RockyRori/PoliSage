@@ -4,7 +4,7 @@ from qdrant_client.http.models import PointStruct, VectorParams, Distance
 # 1. 初始化客户端
 client = QdrantClient(url="http://localhost:6333")
 
-COLLECTION = "poli_sage_multimodal"
+COLLECTION = "PoliSage"
 
 
 # 2. 插入向量（Upsert）
@@ -45,25 +45,25 @@ def insert_vectors():
 
 
 # 3. 根据查询向量检索（Search）
-def search_similar(query_vector, top_k=5):
-    hits = client.search(
+def search_similar(query, top_k=5):
+    hits = client.query_points(
         collection_name=COLLECTION,
-        query_vector=query_vector,
+        query=query,
         limit=top_k,
         with_payload=True  # 同时返回 payload
     )
-    print(f"🔍 找到 {len(hits)} 条最相似记录：")
-    for hit in hits:
+    print(f"🔍 找到 {len(hits.points)} 条最相似记录：")
+    for hit in hits.points:
         print(f"- id={hit.id}, score={hit.score:.4f}, payload={hit.payload}")
 
 
 # 4. 示例运行
 if __name__ == "__main__":
     # 先插入
-    # insert_vectors()
+    insert_vectors()
 
     # 构造一个示例查询向量
-    query_vec = [0.015 * i for i in range(768)]
+    query_vec = [0.15 * i for i in range(768)]
 
     # 再执行检索
     search_similar(query_vec, top_k=3)

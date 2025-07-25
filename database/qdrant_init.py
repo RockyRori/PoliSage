@@ -6,7 +6,7 @@ def init_qdrant():
     # 1. 连接到本地 Qdrant 服务
     client = QdrantClient(url="http://localhost:6333")
 
-    collection_name = "poli_sage_multimodal"
+    collection_name = "PoliSage"
 
     # 2. 列出所有 collections 并检查目标是否已存在
     resp = client.get_collections()
