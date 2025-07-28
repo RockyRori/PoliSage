@@ -68,21 +68,24 @@ def result_understand(hits):
         payload = point.payload
         if payload["type"] == "text":
             print(
-                f"- ID={point.id}, Score={point.score:.4f}, Type=text, Page={payload['page_idx']}, Text='{payload['content'][:400]}...'")  # 限制输出长度
+                f"- ID={point.id}, Score={point.score:.4f}, Type=text, Page={payload['page_idx']}, Text='{payload['text'][:400]}...'")  # 限制输出长度
         elif payload["type"] == "image":
             print(
-                f"- ID={point.id}, Score={point.score:.4f}, Type=image, Page={payload['page_idx']}, Caption='{payload['caption']}', ImagePath='{payload['img_path']}'")
+                f"- ID={point.id}, Score={point.score:.4f}, Type=image, Page={payload['page_idx']}, Text='{payload['text']}', ImagePath='{payload['img_path']}'")
 
 
 # 示例运行
 if __name__ == "__main__":
-    # 示例查询
-    query = "技术创新"
-    print(f"\n🔎 查询文本：'{query}'")
-    answer = search_similar(query, top_k=3)
-    result_understand(answer)
+    # 查看全部数量
+    print(get_collection_point_count(COLLECTION))
 
-    query = "封面图片"
-    print(f"\n🔎 查询文本：'{query}'")
-    answer = search_similar(query, top_k=3)
-    result_understand(answer)
+    # # 示例查询
+    # query = "技术创新"
+    # print(f"\n🔎 查询文本：'{query}'")
+    # answer = search_similar(query, top_k=3)
+    # result_understand(answer)
+    #
+    # query = "封面图片"
+    # print(f"\n🔎 查询文本：'{query}'")
+    # answer = search_similar(query, top_k=3)
+    # result_understand(answer)

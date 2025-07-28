@@ -1,9 +1,7 @@
 # question.py
 
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone, timedelta
-
-db = SQLAlchemy()
+from backend.config import db
 
 
 class Question(db.Model):

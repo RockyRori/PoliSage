@@ -3,3 +3,6 @@ transformers
 torch
 flask
 flask_sqlalchemy
+flask-migrate
+flask-cors
+pymysql

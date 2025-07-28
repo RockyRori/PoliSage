@@ -12,11 +12,12 @@ DROP TABLE IF EXISTS questions;
 -- 创建文件表
 CREATE TABLE IF NOT EXISTS files
 (
-    filename    VARCHAR(255)           NOT NULL,
+    file_name   VARCHAR(255)           NOT NULL,
     file_type   ENUM ('json', 'image') NOT NULL,
+    file_size   VARCHAR(28)            NOT NULL,
     upload_time DATETIME               NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    size        VARCHAR(28)            NOT NULL,
-    PRIMARY KEY (filename)
+
+    PRIMARY KEY (file_name)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
