@@ -1,3 +1,5 @@
 qdrant-client
 transformers
 torch
+flask
+flask_sqlalchemy
