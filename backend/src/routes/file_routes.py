@@ -2,8 +2,11 @@ import os
 
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 
+from backend.config import UPLOAD_FOLDER
 from backend.src.models.file_record import FileRecord
-from backend.src.services.file_service import save_files, delete_file, list_files, modify_json_file
+from backend.src.services.file_service import save_files, delete_file, list_files, modify_json_file, \
+    generate_image_captions
+
 
 file_bp = Blueprint('file_bp', __name__, url_prefix='/api/files')
 
@@ -39,7 +42,7 @@ def delete(file_name):
 @file_bp.route('/<filename>', methods=['GET'])
 def view_file(filename):
     rec = FileRecord.query.get_or_404(filename)
-    base_folder = current_app.config['UPLOAD_FOLDER']
+    base_folder = UPLOAD_FOLDER
     if rec.file_type == 'image':
         folder = os.path.join(base_folder, 'images')
     else:
@@ -56,3 +59,15 @@ def update(filename):
     content = data.get('content')
     result = modify_json_file(filename, content)
     return jsonify(result), 200
+
+
+# 添加图片描述
+@file_bp.route('/<filename>/generate_captions', methods=['POST'])
+def generate_captions(filename):
+    """为 JSON 文件中所有无 caption 的 image 段自动生成描述并保存"""
+    try:
+        updated = generate_image_captions(filename)
+        return jsonify({'status': 'ok', 'updated': updated}), 200
+    except Exception as e:
+        current_app.logger.exception(e)
+        return jsonify({'error': str(e)}), 500

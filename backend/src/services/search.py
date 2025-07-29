@@ -4,19 +4,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct
 from transformers import AutoTokenizer, AutoModel
 import torch
-
-# 配置
-COLLECTION = "PoliSage"
-
-# 初始化 Qdrant 客户端
-client = QdrantClient(url="http://localhost:6333")
+from backend.config import db, qdrant, COLLECTION, UPLOAD_FOLDER
 
 # 使用多语言模型（支持简体/繁体中文 + 英语）
 tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
 model = AutoModel.from_pretrained('bert-base-multilingual-cased')
-
-
-# 生成完整文件路径
 
 
 # 文本编码函数
@@ -33,7 +25,7 @@ def encode_text(text):
 
 def get_collection_point_count(collection_name):
     try:
-        info = client.get_collection(collection_name=collection_name)
+        info = qdrant.get_collection(collection_name=collection_name)
         return info.points_count
     except Exception as e:
         print(f"⚠️ 获取集合信息失败: {e}")
@@ -53,7 +45,7 @@ def search_similar(query_text, top_k=5):
     if total_points == 0:
         print("❌ 数据库中没有可查询的向量。")
         return
-    hits = client.query_points(
+    hits = qdrant.query_points(
         collection_name=COLLECTION,
         query=vector,
         limit=actual_limit,

@@ -3,25 +3,20 @@ import os
 import json
 import shutil
 from datetime import datetime, timezone, timedelta
-
+from PIL import Image
 from flask import current_app
 from werkzeug.utils import secure_filename
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue, PointsSelector
 from backend.src.models.file_record import FileRecord
-from backend.config import db, qdrant, COLLECTION
-from backend.src.services.embed import insert_vectors
+from backend.config import db, qdrant, COLLECTION, UPLOAD_FOLDER
+from backend.src.services.embed import insert_vectors, delete_vectors
 
 ALLOWED_EXT = {'.json', '.png', '.jpg', '.jpeg'}
 
 
-def get_upload_folder():
-    """获取当前应用上下文中的上传目录"""
-    return current_app.config['UPLOAD_FOLDER']
-
-
 def save_files(files):
     """保存文件到本地、写入数据库、并对 JSON 触发向量化"""
-    upload_folder = get_upload_folder()
+    upload_folder = UPLOAD_FOLDER
     results = []
     for f in files:
         ext = os.path.splitext(f.filename)[1].lower()
@@ -57,7 +52,7 @@ def delete_file(filename):
     """删除本地文件和数据库记录"""
     results = []
     rec = FileRecord.query.get_or_404(filename)
-    upload_folder = get_upload_folder()
+    upload_folder = UPLOAD_FOLDER
 
     # 删除 json 文件
     json_path = os.path.join(upload_folder, rec.file_name)
@@ -92,25 +87,59 @@ def list_files(page, per_page):
 
 def modify_json_file(filename, content, new_name=None):
     """重写 JSON 内容、可选重新向量化"""
-    upload_folder = get_upload_folder()
+    upload_folder = UPLOAD_FOLDER
     path = os.path.join(upload_folder, filename)
     # 写入内容
     with open(path, 'w', encoding='utf-8') as fp:
         fp.write(json.dumps(content, ensure_ascii=False))
     # 删除旧向量（按 payload.filename 匹配）
-    qdrant.delete(
-        collection_name=COLLECTION,
-        points_selector=PointsSelector(
-            filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="filename",
-                        match=MatchValue(value=filename)
-                    )
-                ]
-            )
-        )
-    )
+    delete_vectors(filename)
     # 重向量化
     insert_vectors(filename)
     return FileRecord.query.get(filename).to_dict()
+
+
+def generate_image_captions(filename: str) -> dict:
+    """
+    1. 加载指定 JSON 文件
+    2. 遍历所有 item, 对 type=='image' 且 item['text'] 为空的，读取本地图片，调用 caption 模型
+    3. 更新 JSON 并重写文件
+    4. 删除旧向量 & 重新向量化该 JSON
+    5. 返回更新了多少段
+    """
+    upload_folder = UPLOAD_FOLDER
+    json_path = os.path.join(upload_folder, filename)
+    data = json.load(open(json_path, 'r', encoding='utf-8'))
+    print(data)
+    count = 0
+    for item in data:
+        if item.get('type') == 'image' and not item.get('text'):
+            # 图片路径
+            img_rel = item.get('img_path')  # e.g. "images/xxx.jpg"
+            img_path = os.path.join(upload_folder, img_rel)
+            if os.path.exists(img_path):
+                # 调用你的 caption 模型
+                caption = generate_caption_for_image(img_path)
+                item['text'] = caption
+                count += 1
+
+    # 重写 JSON 文件
+    with open(json_path, 'w', encoding='utf-8') as fp:
+        json.dump(data, fp, ensure_ascii=False, indent=2)
+
+    # 先删除旧向量
+    delete_vectors(filename)
+    # 重新向量化整个 JSON
+    insert_vectors(filename)
+
+    return {'filename': filename, 'captions_generated': count}
+
+
+def generate_caption_for_image(img_path) -> str:
+    Image.open(img_path)
+    return "wait for next step"
+
+
+# 示例运行
+if __name__ == "__main__":
+    generate_image_captions("常州千瓦机组.json")

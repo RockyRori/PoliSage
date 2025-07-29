@@ -5,7 +5,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_cors import CORS
 
-from backend.config import Config
+from backend.config import Config, UPLOAD_FOLDER
 from backend.src.routes.file_routes import file_bp
 from backend.src.routes.chat_routes import chat_bp
 from backend.config import db
@@ -22,14 +22,9 @@ def create_app():
     ]
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
-    # 上传文件夹 & API 基础路径
-    # base_dir = os.path.dirname(os.path.abspath(__file__))
-    # app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'uploads')
-    # app.config['API_BASE'] = os.getenv('API_BASE', '/api/files')
-
     # 确保上传目录存在
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'images'), exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(os.path.join(UPLOAD_FOLDER, 'images'), exist_ok=True)
 
     # 初始化数据库
     db.init_app(app)
