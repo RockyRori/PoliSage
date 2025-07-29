@@ -11,7 +11,7 @@ file_bp = Blueprint('file_bp', __name__, url_prefix='/api/files')
 # 列表查询
 @file_bp.route('', methods=['GET'])
 def list_files():
-    recs = FileRecord.query.order_by(FileRecord.upload_time.desc()).all()
+    recs = FileRecord.query.order_by(FileRecord.file_type.asc()).all()
     return jsonify([r.to_dict() for r in recs])
 
 

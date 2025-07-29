@@ -10,6 +10,7 @@ from backend.src.routes.file_routes import file_bp
 from backend.src.routes.chat_routes import chat_bp
 from backend.config import db
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
