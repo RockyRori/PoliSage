@@ -22,7 +22,11 @@ export function deleteDocs(file_name) {
     return api.delete(`/files/${name}`)
 }
 
+export function intelligentRecognize(file_name) {
+    return api.post(`/files/${file_name}/generate_captions`)
+}
+
 export function modifyJson(fileName, content) {
-  const name = encodeURIComponent(fileName)
-  return api.put(`/files/${name}`, { content })
+    const name = encodeURIComponent(fileName)
+    return api.put(`/files/${name}`, { content })
 }

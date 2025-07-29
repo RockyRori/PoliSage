@@ -12,6 +12,8 @@
 
         <div v-if="message" class="mt-4 text-green-600">{{ message }}</div>
         <n-button @click="batchDownloadAll" :disabled="!hasSelection">下载勾选</n-button>
+        <n-button type="primary" :disabled="!hasJsonSelection || loadingSmart" @click="onSmartRecognize">
+          {{ loadingSmart ? '识图中…' : '智能识图' }}</n-button>
         <n-button @click="batchDelete" type="error" :disabled="!hasSelection">批量删除</n-button>
         <n-button @click="selectAll">全选</n-button>
         <n-button @click="invertSelect">反选</n-button>
@@ -45,7 +47,7 @@ import { ref, reactive, computed, onMounted, h, nextTick } from 'vue'
 import { NCard, NButton, NDataTable, NCheckbox, NSpace } from 'naive-ui'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
-import { uploadFiles, fetchDocs, deleteDocs, modifyJson } from '@/api/pdf'
+import { uploadFiles, fetchDocs, deleteDocs, modifyJson, intelligentRecognize } from '@/api/pdf'
 
 // State
 const files = ref([])
@@ -58,6 +60,7 @@ const editingRow = ref(null)
 const originalJson = ref([])   // 存原始 JSON 数组
 const editJson = reactive([])  // 可编辑的深拷贝
 const showEditModal = ref(false)
+const loadingSmart = ref(false)
 
 // Sorting state
 const sortKey = ref(null)
@@ -94,6 +97,13 @@ function changeSort(key) {
 }
 
 const hasSelection = computed(() => checkedKeys.value.length > 0)
+const hasJsonSelection = computed(() => {
+  return checkedKeys.value.some(key => {
+    const row = docsOriginal.value.find(d => d.file_name === key)
+    return row && row.file_type === 'json'
+  })
+})
+
 function rowKey(row) {
   return row.file_name
 }
@@ -263,6 +273,33 @@ async function onEditJson(row) {
   // 深拷贝，并只保留需要编辑的 text 字段，其它字段也保留用于显示
   editJson.splice(0, editJson.length, ...data.map(item => ({ ...item })))
   showEditModal.value = true
+}
+
+async function onSmartRecognize() {
+  if (!hasJsonSelection.value) return
+  loadingSmart.value = true
+  try {
+    // 1. 找到所有被选且 file_type=json 的行
+    const targets = docsOriginal.value.filter(
+      d => checkedKeys.value.includes(d.file_name) && d.file_type === 'json'
+    )
+
+    // 2. 并行调用后端接口
+    await Promise.all(
+      targets.map(row =>
+        intelligentRecognize(row.file_name)
+      )
+    )
+
+    // 3. 提示与刷新
+    alert(`已对 ${targets.length} 个 JSON 文件完成智能识图`)
+    await load()  // 重新拉取最新列表（如果后端有生成新字段、URL 等）
+  } catch (err) {
+    console.error('智能识图出错', err)
+    alert('智能识图失败，请稍后重试')
+  } finally {
+    loadingSmart.value = false
+  }
 }
 
 // 保存修改
