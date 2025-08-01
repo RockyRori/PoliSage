@@ -47,7 +47,7 @@ import { ref, reactive, computed, onMounted, h, nextTick } from 'vue'
 import { NCard, NButton, NDataTable, NCheckbox, NSpace } from 'naive-ui'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
-import { uploadFiles, fetchDocs, deleteDocs, modifyJson, intelligentRecognize } from '@/api/pdf'
+import { uploadFiles, fetchDocs, deleteDocs, modifyJson, intelligentRecognize } from '@/api/file'
 
 // State
 const files = ref([])

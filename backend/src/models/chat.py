@@ -4,11 +4,11 @@ from datetime import datetime, timezone, timedelta
 from backend.config import db
 
 
-class Question(db.Model):
-    __tablename__ = 'questions'
+class Chat(db.Model):
+    __tablename__ = 'chats'
 
-    questions_id = db.Column(db.String(16), primary_key=True)
-    previous_id = db.Column(db.String(16), db.ForeignKey('questions.questions_id'), nullable=True)
+    question_id = db.Column(db.String(16), primary_key=True)
+    previous_id = db.Column(db.String(16), db.ForeignKey('chats.question_id'), nullable=True)
     created_at = db.Column(
         db.DateTime, nullable=False,
         default=datetime.now(timezone(timedelta(hours=8)))
@@ -18,4 +18,4 @@ class Question(db.Model):
     reference = db.Column(db.Text, nullable=True)
     feedback = db.Column(db.Text, nullable=True)
 
-    prev = db.relationship('Question', remote_side=[questions_id], backref='next_questions')
+    prev = db.relationship('Chat', remote_side=[question_id], backref='next')

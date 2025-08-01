@@ -9,9 +9,10 @@ chat_bp = Blueprint('chat_bp', __name__, url_prefix='/api/chat')
 def chat_query():
     data = request.get_json()
     question = data.get('question')
+    previous_id = data.get('previous_id')
     if not question:
         return jsonify({'error': 'Question is required'}), 400
-    response = process_query(question)
+    response = process_query(question, previous_id)
     return jsonify(response), 200
 
 
