@@ -9,6 +9,7 @@ from backend.src.llms.adapter import generate_answer
 from backend.config import db, qdrant, COLLECTION
 from backend.src.models.question import Question
 from backend.src.services.embed import encode_text
+from backend.src.services.search import search_similar
 
 
 def process_query(question_text: str) -> dict:
@@ -23,15 +24,9 @@ def process_query(question_text: str) -> dict:
     qid = uuid.uuid4().hex[:16]
 
     # 2. 向量检索
-    vector = encode_text(question_text)
-    hits: list[ScoredPoint] = qdrant.search(
-        collection_name=COLLECTION,
-        query_vector=vector,
-        limit=5,
-        with_payload=True
-    )
+    hits = search_similar(question_text, top_k=10)
     # 提取参考文本
-    snippets = [hit.payload.get('text', '') for hit in hits]
+    snippets = [hit.payload.get('text', '') + hit.payload.get('img_path', '') for hit in hits.points]
     reference = "\n".join(snippets)
 
     # 3. 调用 LLM 生成回答
@@ -67,3 +62,8 @@ def record_feedback(question_id: str, rating: int, comments: str = '') -> None:
         feedback_entry += f"; Comments={comments}"
     q.feedback = feedback_entry
     db.session.commit()
+
+
+# 示例运行
+if __name__ == "__main__":
+    process_query("what to do next")

@@ -1,16 +1,56 @@
-import os
 import json
-from qdrant_client import QdrantClient
+import os
+from typing import Optional
+
+import torch
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 from qdrant_client.http.models import PointStruct, FilterSelector
 from transformers import AutoTokenizer, AutoModel
-import torch
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue, PointsSelector
-from backend.config import Config
-from backend.config import db, qdrant, COLLECTION, UPLOAD_FOLDER
 
-# 使用多语言模型（支持简体/繁体中文 + 英语）
-tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
-model = AutoModel.from_pretrained('bert-base-multilingual-cased')
+from backend.config import qdrant, COLLECTION, UPLOAD_FOLDER
+
+
+class BertLoader:
+    """
+    封装 Hugging Face 的 BERT tokenizer 和 model 加载逻辑。
+    如果初始化失败，会抛出详细错误信息。
+    """
+
+    def __init__(self, model_name: str = 'bert-base-multilingual-cased'):
+        """
+        初始化并加载 tokenizer 和 model。
+
+        Args:
+            model_name (str): 预训练模型名称，默认为 'bert-base-multilingual-cased'。
+
+        Raises:
+            RuntimeError: 如果加载失败，包含具体错误信息。
+        """
+        self.model_name = model_name
+        self.tokenizer: Optional[AutoTokenizer] = None
+        self.model: Optional[AutoModel] = None
+
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+            self.model = AutoModel.from_pretrained(model_name, local_files_only=True)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to load tokenizer or model '{model_name}'. Error: {str(e)}"
+            )
+
+    @property
+    def get_tokenizer(self):
+        """返回 tokenizer，如果未加载则抛出错误。"""
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not loaded! Check initialization.")
+        return self.tokenizer
+
+    @property
+    def get_model(self):
+        """返回 model，如果未加载则抛出错误。"""
+        if self.model is None:
+            raise RuntimeError("Model not loaded! Check initialization.")
+        return self.model
 
 
 # 生成完整文件路径
@@ -24,9 +64,11 @@ def get_json_file_path(json_name):
 def encode_text(text):
     if not text or len(text.strip()) == 0:
         return None
-    inputs = tokenizer(text, return_tensors='pt', truncation=True, padding=True)
+
+    bert_loader = BertLoader('bert-base-multilingual-cased')
+    inputs = bert_loader.get_tokenizer(text, return_tensors='pt', truncation=True, padding=True)
     with torch.no_grad():
-        outputs = model(**inputs)
+        outputs = bert_loader.get_model(**inputs)
     return outputs.last_hidden_state[:, 0, :].squeeze().numpy().tolist()
 
 

@@ -1,12 +1,9 @@
 # backend/src/services/file_service.py
 import os
 import json
-import shutil
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 from flask import current_app
-from werkzeug.utils import secure_filename
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue, PointsSelector
 from backend.src.models.file_record import FileRecord
 from backend.config import db, qdrant, COLLECTION, UPLOAD_FOLDER
 from backend.src.services.embed import insert_vectors, delete_vectors
@@ -102,7 +99,7 @@ def modify_json_file(filename, content, new_name=None):
 def generate_image_captions(filename: str) -> dict:
     """
     1. 加载指定 JSON 文件
-    2. 遍历所有 item, 对 type=='image' 且 item['text'] 为空的，读取本地图片，调用 caption 模型
+    2. 遍历所有 item, 对 type==text/equation/table/image
     3. 更新 JSON 并重写文件
     4. 删除旧向量 & 重新向量化该 JSON
     5. 返回更新了多少段
@@ -113,14 +110,34 @@ def generate_image_captions(filename: str) -> dict:
     print(data)
     count = 0
     for item in data:
-        if item.get('type') == 'image' and not item.get('text'):
-            # 图片路径
-            img_rel = item.get('img_path')  # e.g. "images/xxx.jpg"
-            img_path = os.path.join(upload_folder, img_rel)
-            if os.path.exists(img_path):
-                # 调用你的 caption 模型
-                caption = generate_caption_for_image(img_path)
-                item['text'] = caption
+        if item.get('type') == 'text':
+            # 无需修改
+            pass
+        elif item.get('type') == 'equation':
+            # 无需修改
+            pass
+        elif item.get('type') == 'table':
+            # 移动 table_body 到 text
+            if not item.get('text'):
+                item['text'] = item.get('table_body')
+                count += 1
+        elif item.get('type') == 'image':
+            # 移动 image_caption 和 image_footnote 到 text
+            if not item.get('text'):
+                image_caption = "".join(item.get('image_caption'))
+                image_footnote = "".join(item.get('image_footnote'))
+                text = image_caption + image_footnote
+                if len(text) == 0:
+                    img_rel = item.get('img_path')  # e.g. "images/xxx.jpg"
+                    img_path = os.path.join(upload_folder, img_rel)
+                    if os.path.exists(img_path):
+                        # 调用你的 caption 模型
+                        text = generate_caption_for_image(img_path)
+                else:
+                    image_caption = "None" if len(image_caption) == 0 else image_caption
+                    image_footnote = "None" if len(image_footnote) == 0 else image_footnote
+                    text = ("image_caption: " + image_caption + " image_footnote: " + image_footnote)
+                item['text'] = text
                 count += 1
 
     # 重写 JSON 文件
@@ -142,4 +159,4 @@ def generate_caption_for_image(img_path) -> str:
 
 # 示例运行
 if __name__ == "__main__":
-    generate_image_captions("常州千瓦机组.json")
+    print(generate_image_captions("test.json"))
