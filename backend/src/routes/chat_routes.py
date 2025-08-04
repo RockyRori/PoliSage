@@ -10,9 +10,11 @@ def chat_query():
     data = request.get_json()
     question = data.get('question')
     previous_id = data.get('previous_id')
+    model = data.get('model')
+    language = data.get('language')
     if not question:
         return jsonify({'error': 'Question is required'}), 400
-    response = process_query(question, previous_id)
+    response = process_query(question, previous_id, model, language)
     return jsonify(response), 200
 
 

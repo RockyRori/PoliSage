@@ -13,7 +13,9 @@ const api = axios.create({
 export function queryChat(question, previousId = null) {
   return api.post('/chat/query', {
     question,
-    previous_id: previousId
+    previous_id: previousId,
+    model: "default",
+    language: "Chinese"
   })
 }
 

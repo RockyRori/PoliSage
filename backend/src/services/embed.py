@@ -87,6 +87,7 @@ def insert_vectors(file_name):
         page_idx = item.get("page_idx", -1)
         text = item.get("text", "")
         img_path = item.get("img_path", "")
+        table_body = item.get("table_body", "")
         vector = encode_text(text)
         if vector is None:
             print(f"⚠️ 跳过空文本块，page_idx={page_idx}")
@@ -96,7 +97,8 @@ def insert_vectors(file_name):
             "type": item_type,
             "page_idx": page_idx,
             "text": text,
-            "img_path": img_path
+            "img_path": img_path,
+            "table_body": table_body
         }
         points.append(PointStruct(id=unique_id, vector=vector, payload=payload))
         unique_id += 1

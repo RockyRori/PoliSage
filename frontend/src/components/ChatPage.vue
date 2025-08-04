@@ -10,8 +10,9 @@
             <!-- 渲染引用片段中的图片和文本 -->
             <div v-if="msg.reference && msg.reference.length" class="refs">
               <div v-for="(ref, idx) in msg.reference" :key="idx" class="ref-item">
-                <img v-if="ref.img_path" :src="ref.img_path" alt="ref image" />
-                <p v-else>{{ ref.text }}</p>
+                <p>{{ ref.text }}</p>
+                <img v-if="ref.img_path" :src="ref.img_path" :alt="ref.img_path" />
+                <div v-if="ref.table_body" v-html="renderMarkdown(ref.table_body)"></div>
               </div>
             </div>
             <!-- 评分按钮 -->
@@ -39,6 +40,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { marked } from 'marked'
 import { NCard, NInput, NButton, NSpace } from 'naive-ui'
 import { queryChat, sendFeedback } from '@/api/chat'
 
@@ -92,6 +94,11 @@ async function send() {
 function rate(question_id, rating) {
   feedback[question_id] = rating
   sendFeedback(question_id, rating)
+}
+
+function renderMarkdown(content) {
+  if (!content) return ''
+  return marked.parse(content)
 }
 </script>
 
@@ -153,8 +160,19 @@ function rate(question_id, rating) {
 }
 
 .ref-item img {
-  max-width: 100px;
-  max-height: 80px;
+  max-width: 300px;
+  max-height: 280px;
+}
+
+.ref-item table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.ref-item th,
+.ref-item td {
+  border: 1px solid #ddd;
+  padding: 8px;
 }
 
 .input-area {

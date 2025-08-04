@@ -1,4 +1,5 @@
 # backend/src/services/chat_service.py
+import time
 import uuid
 from datetime import datetime, timezone, timedelta
 from flask import current_app
@@ -12,7 +13,8 @@ from backend.src.services.embed import encode_text
 from backend.src.services.search import search_similar
 
 
-def process_query(question_text: str, previous_id: str = None) -> dict:
+def process_query(question_text: str, previous_id: str = None, model: str = "default",
+                  language: str = "Chinese") -> dict:
     """
     1. 为问题生成唯一 16 位 ID
     2. 对问题进行向量编码并在 Qdrant 检索相似文档
@@ -24,22 +26,30 @@ def process_query(question_text: str, previous_id: str = None) -> dict:
     qid = uuid.uuid4().hex[:16]
 
     # 2. 向量检索
-    hits = search_similar(question_text, top_k=10)
+    start_search = time.time()
+    hits = search_similar(question_text, top_k=3)
     # 提取参考文本
     snippets = [
         {
             'text': hit.payload.get('text', ''),
-            **({'img_path': hit.payload.get('img_path').replace("images/", "/api/files/", 1)} if hit.payload.get('img_path') else {})
+            **({'img_path': hit.payload.get('img_path').replace("images/", "/api/files/", 1)} if hit.payload.get(
+                'img_path') else {}),
+            **({'table_body': hit.payload.get('table_body')} if hit.payload.get(
+                'table_body') else {})
         }
         for hit in hits.points
     ]
+    search_time = time.time() - start_search
 
     # 3. 调用 LLM 生成回答
+    start_llm = time.time()
     context = "\n".join(item['text'] for item in snippets if item['text'])
-    answer = generate_answer(question_text, context)
+    answer = generate_answer(question_text, context, model, language)
+    llm_time = time.time() - start_llm
 
     # 4. 写入数据库
-    q = Chat(
+    start_record = time.time()
+    chat = Chat(
         question_id=qid,
         previous_id=previous_id,
         created_at=datetime.now(timezone(timedelta(hours=8))),
@@ -48,10 +58,15 @@ def process_query(question_text: str, previous_id: str = None) -> dict:
         reference=str(snippets),
         feedback=None
     )
-    db.session.add(q)
+    db.session.add(chat)
     db.session.commit()
+    record_time = time.time() - start_record
 
     # 5. 返回
+    # Print timing results
+    print(f"1. Qdrant Search Time: {search_time:.2f}s")
+    print(f"2. LLM Response Generation Time: {llm_time:.2f}s")
+    print(f"3. MySQL Record Time: {record_time:.2f}s")
     return {'question_id': qid, 'answer': answer, 'reference': snippets}
 
 
